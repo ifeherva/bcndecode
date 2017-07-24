@@ -87,6 +87,7 @@ extern "C" {
     ) -> c_int;
 }
 
+/// Specifies the pixel format of the output data
 #[derive(Copy, Clone)]
 pub enum BcnDecoderFormat {
     RGBA = 1,
