@@ -31,7 +31,7 @@
 //! * Bc4: 1-channel 8-bit via 1 BC3 alpha block
 //! * Bc5: 2-channel 8-bit via 2 BC3 alpha blocks
 //!
-//! The following formates are not implemented:
+//! The following formats are not implemented:
 //!
 //! * Bc6: 3-channel 16-bit float
 //! * Bc7: 4-channel 8-bit via everything
