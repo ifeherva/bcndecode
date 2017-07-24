@@ -1,4 +1,5 @@
 # Decoder for DXTn-compressed data
+[![Build Status](https://travis-ci.org/ifeherva/bcndecode.svg?branch=master)](https://travis-ci.org/ifeherva/bcndecode)
 
 This crate provides methods to decompress DXTn-compressed image data via a wrapper around
 the original C code used in the [Python Pillow Imaging package](https://python-pillow.org/).
