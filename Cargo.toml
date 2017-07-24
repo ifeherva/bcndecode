@@ -7,7 +7,7 @@ license = "MIT"
 build = "build.rs"
 repository = "https://github.com/ifeherva/bcndecode"
 homepage = "https://github.com/ifeherva/bcndecode"
-keywords = ["bcn", "dxt", "image processing"]
+keywords = ["bcn", "dxt", "image-processing"]
 travis-ci = { repository = "https://github.com/ifeherva/bcndecode", branch = "master" }
 
 [build-dependencies]
