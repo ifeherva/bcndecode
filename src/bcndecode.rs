@@ -23,6 +23,7 @@ use std::result::Result;
 use std::error;
 use std::io;
 use std::fmt;
+use decode::decode_rust_internal;
 
 /// The error type for all bcn decoding operations.
 #[derive(Debug)]
@@ -39,12 +40,17 @@ pub struct Error {
 pub enum ErrorKind {
     /// Decoding failed due to incorrect source data.
     ImageDecodingError,
+    /// Size of the image is invalid
+    InvalidImageSize,
+    NotImplemented,
 }
 
 impl ErrorKind {
     fn as_str(&self) -> &'static str {
         match *self {
             ErrorKind::ImageDecodingError => "Failed to decode image",
+            ErrorKind::InvalidImageSize => "Size of the image is invalid",
+            ErrorKind::NotImplemented => "Feature is not implemented",
         }
     }
 }
@@ -68,7 +74,7 @@ impl From<Error> for io::Error {
 }
 
 impl Error {
-    fn new(kind: ErrorKind) -> Error {
+    pub fn new(kind: ErrorKind) -> Error {
         Error { kind: kind }
     }
 }
@@ -201,4 +207,14 @@ pub fn decode(
     }
 
     Ok(dst)
+}
+
+pub fn decode_rust(
+    source: &[u8],
+    width: usize,
+    height: usize,
+    encoding: BcnEncoding,
+    format: BcnDecoderFormat,
+) -> Result<Vec<u8>, Error> {
+    decode_rust_internal(source, width, height, encoding, format)
 }

@@ -41,6 +41,7 @@
 
 extern crate libc;
 
+mod decode;
 pub mod bcndecode;
 
 #[cfg(test)]
