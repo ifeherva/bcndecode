@@ -106,7 +106,7 @@ pub enum BcnDecoderFormat {
 #[derive(Copy, Clone)]
 pub enum BcnEncoding {
     /// Raw data (will not be decoded)
-    Raw = 0,
+    Raw = 0, // TODO: consider removing it
     /// BC1: 565 color, 1-bit alpha (dxt1)
     Bc1 = 1,
     /// BC2: 565 color, 4-bit alpha (dxt3)
