@@ -269,7 +269,7 @@ fn swizzle_copy(
     dst_ptr: usize,
     src: &[u8],
     src_ptr: usize,
-    block_size: usize,
+    mut block_size: usize,
 ) {
     if swizzle == 0 || swizzle == 0xe4 {
         dst[dst_ptr..dst_ptr + block_size].copy_from_slice(&src[src_ptr..src_ptr + block_size]);
@@ -277,11 +277,18 @@ fn swizzle_copy(
     }
 
     // bring sz down to size-per-component
-    // sz >>= 2;
-    // memcpy(dst + sz * ((swizzle &    3)     ), src       , sz);
-    // memcpy(dst + sz * ((swizzle & 0x0c) >> 2), src +   sz, sz);
-    // memcpy(dst + sz * ((swizzle & 0x30) >> 4), src + 2*sz, sz);
-    // memcpy(dst + sz * ((swizzle & 0xc0) >> 6), src + 3*sz, sz);
+    block_size >>= 2;
+    let mut start_ptr = dst_ptr + ( block_size * (((swizzle as usize) &    3)     ) );
+    dst[start_ptr..start_ptr + block_size].copy_from_slice(&src[src_ptr..src_ptr + block_size]);
+
+    start_ptr = dst_ptr + block_size * (((swizzle as usize) & 0x0c) >> 2);
+    dst[start_ptr..start_ptr+block_size].copy_from_slice(&src[src_ptr+block_size..src_ptr + 2*block_size]);
+    
+    start_ptr = dst_ptr + block_size * (((swizzle as usize) & 0x30) >> 4);
+    dst[start_ptr..start_ptr+block_size].copy_from_slice(&src[src_ptr+2*block_size..src_ptr + 3*block_size]);
+
+    start_ptr = dst_ptr + block_size * (((swizzle as usize) & 0xc0) >> 6);
+    dst[start_ptr..start_ptr+block_size].copy_from_slice(&src[src_ptr+3*block_size..src_ptr + 4*block_size]);
 }
 
 fn decode_bc1_block(col: &mut [RGBA], source: &[u8], src_pointer: usize) {
@@ -290,7 +297,7 @@ fn decode_bc1_block(col: &mut [RGBA], source: &[u8], src_pointer: usize) {
 
 fn decode_bc3_block(col: &mut [RGBA], source: &[u8], src_pointer: usize) {
     decode_bc1_color(col, source, src_pointer + 8);
-    decode_bc3_alpha((char *)col, src, sizeof(col[0]), 3);
+    //decode_bc3_alpha((char *)col, src, sizeof(col[0]), 3);
 }
 
 fn decode_565(x: u16) -> RGBA {
@@ -353,6 +360,6 @@ fn decode_bc1_color(dst: &mut [RGBA], source: &[u8], src_pointer: usize) {
     }
 }
 
-fn decode_bc3_alpha(char *dst, const uint8_t *src, int stride, int o) {
+fn decode_bc3_alpha(/*char *dst, const uint8_t *src, int stride, int o*/) {
 
 }
