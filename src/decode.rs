@@ -69,10 +69,10 @@ struct Bc1Color {
 }
 
 impl Bc1Color {
-    fn load(&mut self, source: &[u8], src_pointer: usize) {
-        self.c0 = load_16(source, src_pointer);
-        self.c1 = load_16(source, src_pointer + 2);
-        self.lut = load_32(source, src_pointer + 4);
+    fn load(&mut self, source: &[u8]) {
+        self.c0 = load_16(source);
+        self.c1 = load_16(&source[2..]);
+        self.lut = load_32(&source[4..]);
     }
 }
 
@@ -85,10 +85,10 @@ struct Bc3Alpha {
 }
 
 impl Bc3Alpha {
-    fn load(&mut self, source: &[u8], src_ptr: usize) {
-        self.a0 = source[src_ptr];
-        self.a1 = source[src_ptr + 1];
-        self.lut.copy_from_slice(&source[src_ptr + 2..src_ptr + 8]);
+    fn load(&mut self, source: &[u8]) {
+        self.a0 = source[0];
+        self.a1 = source[1];
+        self.lut.copy_from_slice(&source[2..8]);
     }
 }
 
@@ -150,7 +150,7 @@ pub fn decode_rust_internal(
 }
 
 macro_rules! decode_loop {
-    ( $decode_bc1_block:ident, $block_size:expr, $T:ident,
+    ( $decode_fn:ident, $block_size:expr, $T:ident,
     $source:expr, $state:expr, $flip:expr) => {
         let mut bytes = $source.len();
         let mut source_ptr = 0;
@@ -158,7 +158,7 @@ macro_rules! decode_loop {
 
         while bytes >= $block_size {
             let mut col = [$T::default(); 16];
-            $decode_bc1_block(&mut col, $source, source_ptr);
+            $decode_fn(&mut col, &$source[source_ptr..]);
 
             unsafe {
                 put_block($state, to_byte_ptr(&col), mem::size_of::<$T>(), $flip);
@@ -179,7 +179,7 @@ fn decode_bcn(state: &mut BcnDecoderState, source: &[u8], encoding: BcnEncoding,
             decode_loop!(decode_bc1_block, 8, RGBA, source, state, flip);
         }
         BcnEncoding::Bc2 => {
-            //decode_loop!(decode_bc2_block, 16, RGBA, source, state, flip);
+            decode_loop!(decode_bc2_block, 16, RGBA, source, state, flip);
         }
         BcnEncoding::Bc3 => {
             decode_loop!(decode_bc3_block, 16, RGBA, source, state, flip);
@@ -216,9 +216,6 @@ fn put_block(state: &mut BcnDecoderState, col: &[u8], block_size: usize, flip: b
     let xmax = state.width;
     let ymax = state.height;
 
-    let mut dst_ptr: usize;
-    let mut src_ptr: usize;
-
     for j in 0..4 {
         let mut y = state.y + j;
         if flip {
@@ -228,7 +225,7 @@ fn put_block(state: &mut BcnDecoderState, col: &[u8], block_size: usize, flip: b
             if state.y_step < 0 {
                 y = ymax - y - 1;
             }
-            dst_ptr = block_size * state.width * y;
+            let dst_ptr = block_size * state.width * y;
             for i in 0..4 {
                 let x = state.x + i;
                 if x >= state.width {
@@ -236,10 +233,8 @@ fn put_block(state: &mut BcnDecoderState, col: &[u8], block_size: usize, flip: b
                 }
                 swizzle_copy(
                     state.swizzle,
-                    &mut state.buffer,
-                    dst_ptr + block_size * x,
-                    col,
-                    block_size * (j * 4 + i),
+                    &mut state.buffer[dst_ptr + block_size * x..],
+                    &col[block_size * (j * 4 + i)..],
                     block_size,
                 );
             }
@@ -248,15 +243,13 @@ fn put_block(state: &mut BcnDecoderState, col: &[u8], block_size: usize, flip: b
                 y = ymax - y - 1;
             }
             let x = state.x;
-            dst_ptr = (block_size * state.width * y) + block_size * x;
-            src_ptr = block_size * (j * 4);
+            let mut dst_ptr = (block_size * state.width * y) + block_size * x;
+            let mut src_ptr = block_size * (j * 4);
             for _ in 0..4 {
                 swizzle_copy(
                     state.swizzle,
-                    &mut state.buffer,
-                    dst_ptr,
-                    col,
-                    src_ptr,
+                    &mut state.buffer[dst_ptr..],
+                    &col[src_ptr..],
                     block_size,
                 );
                 dst_ptr += block_size;
@@ -271,67 +264,55 @@ fn put_block(state: &mut BcnDecoderState, col: &[u8], block_size: usize, flip: b
     }
 }
 
-fn load_16(source: &[u8], src_pointer: usize) -> u16 {
-    (source[src_pointer] as u16) | (source[src_pointer + 1] as u16) << 8
+fn load_16(source: &[u8]) -> u16 {
+    (source[0] as u16) | (source[1] as u16) << 8
 }
 
-fn load_32(source: &[u8], src_pointer: usize) -> u32 {
-    (source[src_pointer] as u32) | ((source[src_pointer + 1] as u32) << 8) |
-        ((source[src_pointer + 2] as u32) << 16) | ((source[src_pointer + 3] as u32) << 24)
+fn load_32(source: &[u8]) -> u32 {
+    (source[0] as u32) | ((source[1] as u32) << 8) | ((source[2] as u32) << 16) |
+        ((source[3] as u32) << 24)
 }
 
-fn swizzle_copy(
-    swizzle: u8,
-    dst: &mut [u8],
-    dst_ptr: usize,
-    src: &[u8],
-    src_ptr: usize,
-    mut block_size: usize,
-) {
+fn swizzle_copy(swizzle: u8, dst: &mut [u8], src: &[u8], mut block_size: usize) {
     if swizzle == 0 || swizzle == 0xe4 {
-        dst[dst_ptr..dst_ptr + block_size].copy_from_slice(&src[src_ptr..src_ptr + block_size]);
+        dst[0..block_size].copy_from_slice(&src[0..block_size]);
         return;
     }
 
     // bring sz down to size-per-component
     block_size >>= 2;
-    let mut start_ptr = dst_ptr + (block_size * (((swizzle as usize) & 3)));
-    dst[start_ptr..start_ptr + block_size].copy_from_slice(&src[src_ptr..src_ptr + block_size]);
+    let mut start_ptr = block_size * (((swizzle as usize) & 3));
+    dst[start_ptr..start_ptr + block_size].copy_from_slice(&src[0..block_size]);
 
-    start_ptr = dst_ptr + block_size * (((swizzle as usize) & 0x0c) >> 2);
-    dst[start_ptr..start_ptr + block_size].copy_from_slice(
-        &src
-            [src_ptr + block_size..src_ptr + 2 * block_size],
-    );
+    start_ptr = block_size * (((swizzle as usize) & 0x0c) >> 2);
+    dst[start_ptr..start_ptr + block_size].copy_from_slice(&src[block_size..2 * block_size]);
 
-    start_ptr = dst_ptr + block_size * (((swizzle as usize) & 0x30) >> 4);
-    dst[start_ptr..start_ptr + block_size].copy_from_slice(
-        &src
-            [src_ptr + 2 * block_size..src_ptr + 3 * block_size],
-    );
+    start_ptr = block_size * (((swizzle as usize) & 0x30) >> 4);
+    dst[start_ptr..start_ptr + block_size].copy_from_slice(&src[2 * block_size..3 * block_size]);
 
-    start_ptr = dst_ptr + block_size * (((swizzle as usize) & 0xc0) >> 6);
-    dst[start_ptr..start_ptr + block_size].copy_from_slice(
-        &src
-            [src_ptr + 3 * block_size..src_ptr + 4 * block_size],
-    );
+    start_ptr = block_size * (((swizzle as usize) & 0xc0) >> 6);
+    dst[start_ptr..start_ptr + block_size].copy_from_slice(&src[3 * block_size..4 * block_size]);
 }
 
-fn decode_bc1_block(col: &mut [RGBA], source: &[u8], src_pointer: usize) {
-    decode_bc1_color(col, source, src_pointer);
+fn decode_bc1_block(col: &mut [RGBA], source: &[u8]) {
+    decode_bc1_color(col, source);
 }
 
-fn decode_bc3_block(col: &mut [RGBA], source: &[u8], src_pointer: usize) {
-    decode_bc1_color(col, source, src_pointer + 8);
+fn decode_bc2_block(col: &mut [RGBA], source: &[u8]) {
+    decode_bc1_color(col, &source[8..]);
+    for n in 0..16 {
+        let bit_i: usize = n * 4;
+        let by_i: usize = bit_i >> 3;
+        let mut av = 0xf & (source[by_i] >> (bit_i & 7));
+        av = (av << 4) | av;
+        col[n].a = av;
+    }
+}
 
+fn decode_bc3_block(col: &mut [RGBA], source: &[u8]) {
+    decode_bc1_color(col, &source[8..]);
     unsafe {
-        decode_bc3_alpha(
-            to_byte_ptr_mut(col),
-            source,
-            src_pointer,
-            mem::size_of::<RGBA>(),
-            3,
-        );
+        decode_bc3_alpha(to_byte_ptr_mut(col), source, mem::size_of::<RGBA>(), 3);
     }
 }
 
@@ -353,11 +334,11 @@ fn decode_565(x: u16) -> RGBA {
     };
 }
 
-fn decode_bc1_color(dst: &mut [RGBA], source: &[u8], src_pointer: usize) {
+fn decode_bc1_color(dst: &mut [RGBA], source: &[u8]) {
     let mut col = Bc1Color::default();
     let mut p = [RGBA::default(); 4];
 
-    col.load(source, src_pointer);
+    col.load(source);
 
     p[0] = decode_565(col.c0);
     let r0: u16 = p[0].r as u16;
@@ -395,9 +376,9 @@ fn decode_bc1_color(dst: &mut [RGBA], source: &[u8], src_pointer: usize) {
     }
 }
 
-fn decode_bc3_alpha(dst: &mut [u8], source: &[u8], src_pointer: usize, stride: usize, o: usize) {
+fn decode_bc3_alpha(dst: &mut [u8], source: &[u8], stride: usize, o: usize) {
     let mut b = Bc3Alpha::default();
-    b.load(source, src_pointer);
+    b.load(source);
 
     let a0: u16 = b.a0 as u16;
     let a1: u16 = b.a1 as u16;
