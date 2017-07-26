@@ -38,7 +38,7 @@ struct BcnDecoderState {
     // If < 0, the image will be flipped on the y-axis
     y_step: i8,
     // For bc6, data is signed numbers if true.
-    sign: bool,
+    //  sign: bool,
     // Swizzle components as necessary to match the bitmap format
     // 2 bits per component; least-significant two are index of red channel,
     // then green, blue, alpha
@@ -57,10 +57,11 @@ struct RGBA {
 #[derive(Clone, Copy, Default)]
 #[repr(packed)]
 struct LUM {
-    l: u8,
+  //  l: u8,
 }
 
 #[derive(Default)]
+#[repr(packed)]
 struct Bc1Color {
     c0: u16,
     c1: u16,
@@ -72,6 +73,22 @@ impl Bc1Color {
         self.c0 = load_16(source, src_pointer);
         self.c1 = load_16(source, src_pointer + 2);
         self.lut = load_32(source, src_pointer + 4);
+    }
+}
+
+#[derive(Default)]
+#[repr(packed)]
+struct Bc3Alpha {
+    a0: u8,
+    a1: u8,
+    lut: [u8; 6],
+}
+
+impl Bc3Alpha {
+    fn load(&mut self, source: &[u8], src_ptr: usize) {
+        self.a0 = source[src_ptr];
+        self.a1 = source[src_ptr + 1];
+        self.lut.copy_from_slice(&source[src_ptr + 2..src_ptr + 8]);
     }
 }
 
@@ -133,8 +150,8 @@ pub fn decode_rust_internal(
 }
 
 macro_rules! decode_loop {
-    ( $decode_bc1_block:ident, $block_size:expr, $T:ident, $source:expr, $state:expr, $flip:expr) => {
-        
+    ( $decode_bc1_block:ident, $block_size:expr, $T:ident,
+    $source:expr, $state:expr, $flip:expr) => {
         let mut bytes = $source.len();
         let mut source_ptr = 0;
         let y_max = $state.height;
@@ -156,12 +173,7 @@ macro_rules! decode_loop {
     }
 }
 
-fn decode_bcn(
-    state: &mut BcnDecoderState,
-    source: &[u8],
-    encoding: BcnEncoding,
-    flip: bool,
-) {
+fn decode_bcn(state: &mut BcnDecoderState, source: &[u8], encoding: BcnEncoding, flip: bool) {
     match encoding {
         BcnEncoding::Bc1 => {
             decode_loop!(decode_bc1_block, 8, RGBA, source, state, flip);
@@ -193,6 +205,11 @@ fn decode_bcn(
 unsafe fn to_byte_ptr<T>(a: &[T]) -> &[u8] {
     let p: *const u8 = (a as *const [T]) as *const u8;
     slice::from_raw_parts(p, mem::size_of::<T>() * a.len())
+}
+
+unsafe fn to_byte_ptr_mut<T>(a: &mut [T]) -> &mut [u8] {
+    let p: *mut u8 = (a as *mut [T]) as *mut u8;
+    slice::from_raw_parts_mut(p, mem::size_of::<T>() * a.len())
 }
 
 fn put_block(state: &mut BcnDecoderState, col: &[u8], block_size: usize, flip: bool) {
@@ -278,17 +295,26 @@ fn swizzle_copy(
 
     // bring sz down to size-per-component
     block_size >>= 2;
-    let mut start_ptr = dst_ptr + ( block_size * (((swizzle as usize) &    3)     ) );
+    let mut start_ptr = dst_ptr + (block_size * (((swizzle as usize) & 3)));
     dst[start_ptr..start_ptr + block_size].copy_from_slice(&src[src_ptr..src_ptr + block_size]);
 
     start_ptr = dst_ptr + block_size * (((swizzle as usize) & 0x0c) >> 2);
-    dst[start_ptr..start_ptr+block_size].copy_from_slice(&src[src_ptr+block_size..src_ptr + 2*block_size]);
-    
+    dst[start_ptr..start_ptr + block_size].copy_from_slice(
+        &src
+            [src_ptr + block_size..src_ptr + 2 * block_size],
+    );
+
     start_ptr = dst_ptr + block_size * (((swizzle as usize) & 0x30) >> 4);
-    dst[start_ptr..start_ptr+block_size].copy_from_slice(&src[src_ptr+2*block_size..src_ptr + 3*block_size]);
+    dst[start_ptr..start_ptr + block_size].copy_from_slice(
+        &src
+            [src_ptr + 2 * block_size..src_ptr + 3 * block_size],
+    );
 
     start_ptr = dst_ptr + block_size * (((swizzle as usize) & 0xc0) >> 6);
-    dst[start_ptr..start_ptr+block_size].copy_from_slice(&src[src_ptr+3*block_size..src_ptr + 4*block_size]);
+    dst[start_ptr..start_ptr + block_size].copy_from_slice(
+        &src
+            [src_ptr + 3 * block_size..src_ptr + 4 * block_size],
+    );
 }
 
 fn decode_bc1_block(col: &mut [RGBA], source: &[u8], src_pointer: usize) {
@@ -297,7 +323,16 @@ fn decode_bc1_block(col: &mut [RGBA], source: &[u8], src_pointer: usize) {
 
 fn decode_bc3_block(col: &mut [RGBA], source: &[u8], src_pointer: usize) {
     decode_bc1_color(col, source, src_pointer + 8);
-    //decode_bc3_alpha((char *)col, src, sizeof(col[0]), 3);
+
+    unsafe {
+        decode_bc3_alpha(
+            to_byte_ptr_mut(col),
+            source,
+            src_pointer,
+            mem::size_of::<RGBA>(),
+            3,
+        );
+    }
 }
 
 fn decode_565(x: u16) -> RGBA {
@@ -360,6 +395,38 @@ fn decode_bc1_color(dst: &mut [RGBA], source: &[u8], src_pointer: usize) {
     }
 }
 
-fn decode_bc3_alpha(/*char *dst, const uint8_t *src, int stride, int o*/) {
+fn decode_bc3_alpha(dst: &mut [u8], source: &[u8], src_pointer: usize, stride: usize, o: usize) {
+    let mut b = Bc3Alpha::default();
+    b.load(source, src_pointer);
 
+    let a0: u16 = b.a0 as u16;
+    let a1: u16 = b.a1 as u16;
+    let mut a: [u8; 8] = [0; 8];
+    a[0] = a0 as u8;
+    a[1] = a1 as u8;
+    if a0 > a1 {
+        a[2] = ((6 * a0 + 1 * a1) / 7) as u8;
+        a[3] = ((5 * a0 + 2 * a1) / 7) as u8;
+        a[4] = ((4 * a0 + 3 * a1) / 7) as u8;
+        a[5] = ((3 * a0 + 4 * a1) / 7) as u8;
+        a[6] = ((2 * a0 + 5 * a1) / 7) as u8;
+        a[7] = ((1 * a0 + 6 * a1) / 7) as u8;
+    } else {
+        a[2] = ((4 * a0 + 1 * a1) / 5) as u8;
+        a[3] = ((3 * a0 + 2 * a1) / 5) as u8;
+        a[4] = ((2 * a0 + 3 * a1) / 5) as u8;
+        a[5] = ((1 * a0 + 4 * a1) / 5) as u8;
+        a[6] = 0;
+        a[7] = 0xff;
+    }
+    let lut: usize = (b.lut[0] as usize) | ((b.lut[1] as usize) << 8) | ((b.lut[2] as usize) << 16);
+    for n in 0..8 {
+        let aw: usize = 7 & (lut >> (3 * n));
+        dst[stride * n + o] = a[aw];
+    }
+    let lut: usize = (b.lut[3] as usize) | ((b.lut[4] as usize) << 8) | ((b.lut[5] as usize) << 16);
+    for n in 0..8 {
+        let aw: usize = 7 & (lut >> (3 * n));
+        dst[stride * (8 + n) + o] = a[aw];
+    }
 }

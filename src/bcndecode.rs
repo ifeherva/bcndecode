@@ -110,7 +110,7 @@ pub enum BcnEncoding {
     /// BC1: 565 color, 1-bit alpha (dxt1)
     Bc1 = 1,
     /// BC2: 565 color, 4-bit alpha (dxt3)
-    Bc2 = 2, 
+    Bc2 = 2,
     /// BC3: 565 color, 2-endpoint 8-bit interpolated alpha (dxt5)
     Bc3 = 3,
     /// BC4: 1-channel 8-bit via 1 BC3 alpha block
@@ -123,7 +123,8 @@ pub enum BcnEncoding {
     Bc7 = 7,
 }
 
-/// Decodes the given BCN encoded image data. On success, the decoded data as a byte vector is returned.
+/// Decodes the given BCN encoded image data.
+/// On success, the decoded data as a byte vector is returned.
 ///
 /// # Arguments
 ///
@@ -143,21 +144,21 @@ pub enum BcnEncoding {
 /// use bcndecode::bcndecode;
 /// use std::fs::File;
 /// use std::io::Read;
-///    
-/// # use std::io; 
+///
+/// # use std::io;
 /// # fn foo() -> io::Result<()> {
 /// let mut compressed_file = File::open("testdata/images/copyright_2048_compressed.dat")?;
 /// let mut compressed_data = Vec::new();
-/// 
+///
 /// compressed_file.read_to_end(&mut compressed_data)?;
-/// 
+///
 /// let decompressed_data = bcndecode::decode(
 ///     &compressed_data,
 ///     2048,
 ///     2048,
 ///     bcndecode::BcnEncoding::Bc3,
 ///     bcndecode::BcnDecoderFormat::RGBA,
-/// )?; 
+/// )?;
 ///
 /// # Ok(())
 /// # }
