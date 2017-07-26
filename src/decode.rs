@@ -57,7 +57,7 @@ struct RGBA {
 #[derive(Clone, Copy, Default)]
 #[repr(packed)]
 struct LUM {
-  //  l: u8,
+    l: u8,
 }
 
 #[derive(Default)]
@@ -185,10 +185,10 @@ fn decode_bcn(state: &mut BcnDecoderState, source: &[u8], encoding: BcnEncoding,
             decode_loop!(decode_bc3_block, 16, RGBA, source, state, flip);
         }
         BcnEncoding::Bc4 => {
-            //decode_loop!(decode_bc4_block, 8, LUM, source, state, flip);
+            decode_loop!(decode_bc4_block, 8, LUM, source, state, flip);
         }
         BcnEncoding::Bc5 => {
-            //decode_loop!(decode_bc5_block, 16, RGBA, source, state, flip);
+            decode_loop!(decode_bc5_block, 16, RGBA, source, state, flip);
         }
         BcnEncoding::Bc6 => {
             // TODO: bc6
@@ -313,6 +313,20 @@ fn decode_bc3_block(col: &mut [RGBA], source: &[u8]) {
     decode_bc1_color(col, &source[8..]);
     unsafe {
         decode_bc3_alpha(to_byte_ptr_mut(col), source, mem::size_of::<RGBA>(), 3);
+    }
+}
+
+fn decode_bc4_block(col: &mut [LUM], source: &[u8]) {
+    unsafe {
+        decode_bc3_alpha(to_byte_ptr_mut(col), source, mem::size_of::<LUM>(), 0);
+    }
+}
+
+fn decode_bc5_block(col: &mut [RGBA], source: &[u8]) {
+    unsafe {
+        let dst = to_byte_ptr_mut(col);
+        decode_bc3_alpha(dst, source, mem::size_of::<RGBA>(), 0);
+        decode_bc3_alpha(dst, &source[8..], mem::size_of::<RGBA>(), 1);
     }
 }
 
