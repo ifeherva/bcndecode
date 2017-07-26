@@ -36,8 +36,11 @@
 //! * Bc6: 3-channel 16-bit float
 //! * Bc7: 4-channel 8-bit via everything
 //!
-//! Format documentation:
+//! Format documentation for BC1-BC5
 //! http://oss.sgi.com/projects/ogl-sample/registry/EXT/texture_compression_s3tc.txt
+//!
+//! BC6 and BC7 are described here:
+//! https://www.opengl.org/registry/specs/ARB/texture_compression_bptc.txt
 
 extern crate libc;
 
