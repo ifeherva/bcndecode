@@ -55,17 +55,19 @@ mod tests {
     use std::error::Error;
     use super::bcndecode::*;
 
-    static FILE_PATH_COPYRIGHT_2048_COMPRESSED: &'static str = "testdata/images/copyright_2048_compressed.dat";
-    static FILE_PATH_COPYRIGHT_2048_DECOMPRESSED: &'static str = "testdata/images/copyright_2048_decompressed.dat";
+    static FILE_PATH_COMPRESSED_BC3: &'static str = "testdata/images/copyright_2048_compressed_bc3.dat";
+    static FILE_PATH_DECOMPRESSED_BC3: &'static str = "testdata/images/copyright_2048_decompressed_bc3.dat";
+    static FILE_PATH_COMPRESSED_BC1: &'static str = "testdata/images/copyright_2048_compressed_bc1.dat";
+    static FILE_PATH_DECOMPRESSED_BC1: &'static str = "testdata/images/copyright_2048_decompressed_bc1.dat";
 
     #[test]
-    fn decode_copyright_2048() {
-        let mut compressed_file = match File::open(FILE_PATH_COPYRIGHT_2048_COMPRESSED) {
+    fn decode_bc3() {
+        let mut compressed_file = match File::open(FILE_PATH_COMPRESSED_BC3) {
             Ok(f) => f,
             Err(err) => {
                 panic!(
                     "Failed to open test data file at {}: {}",
-                    FILE_PATH_COPYRIGHT_2048_COMPRESSED,
+                    FILE_PATH_COMPRESSED_BC3,
                     err.description()
                 )
             }
@@ -79,18 +81,18 @@ mod tests {
             Err(err) => {
                 panic!(
                     "Failed to read test data at {}: {}",
-                    FILE_PATH_COPYRIGHT_2048_COMPRESSED,
+                    FILE_PATH_COMPRESSED_BC3,
                     err.description()
                 )
             }
         };
 
-        let mut decompressed_file = match File::open(FILE_PATH_COPYRIGHT_2048_DECOMPRESSED) {
+        let mut decompressed_file = match File::open(FILE_PATH_DECOMPRESSED_BC3) {
             Ok(f) => f,
             Err(err) => {
                 panic!(
                     "Failed to open test data file at {}: {}",
-                    FILE_PATH_COPYRIGHT_2048_COMPRESSED,
+                    FILE_PATH_COMPRESSED_BC3,
                     err.description()
                 )
             }
@@ -102,7 +104,7 @@ mod tests {
             Err(err) => {
                 panic!(
                     "Failed to read test data at {}: {}",
-                    FILE_PATH_COPYRIGHT_2048_DECOMPRESSED,
+                    FILE_PATH_DECOMPRESSED_BC3,
                     err.description()
                 )
             }
@@ -119,7 +121,7 @@ mod tests {
             Err(err) => {
                 panic!(
                     "Failed to decompress test data at {}: {}",
-                    FILE_PATH_COPYRIGHT_2048_COMPRESSED,
+                    FILE_PATH_COMPRESSED_BC3,
                     err.description()
                 );
             }
@@ -130,13 +132,13 @@ mod tests {
     }
 
     #[test]
-    fn decode_rust_copyright_2048() {
-        let mut compressed_file = match File::open(FILE_PATH_COPYRIGHT_2048_COMPRESSED) {
+    fn decode_rust_bc3() {
+        let mut compressed_file = match File::open(FILE_PATH_COMPRESSED_BC3) {
             Ok(f) => f,
             Err(err) => {
                 panic!(
                     "Failed to open test data file at {}: {}",
-                    FILE_PATH_COPYRIGHT_2048_COMPRESSED,
+                    FILE_PATH_COMPRESSED_BC3,
                     err.description()
                 )
             }
@@ -150,18 +152,18 @@ mod tests {
             Err(err) => {
                 panic!(
                     "Failed to read test data at {}: {}",
-                    FILE_PATH_COPYRIGHT_2048_COMPRESSED,
+                    FILE_PATH_COMPRESSED_BC3,
                     err.description()
                 )
             }
         };
 
-        let mut decompressed_file = match File::open(FILE_PATH_COPYRIGHT_2048_DECOMPRESSED) {
+        let mut decompressed_file = match File::open(FILE_PATH_DECOMPRESSED_BC3) {
             Ok(f) => f,
             Err(err) => {
                 panic!(
                     "Failed to open test data file at {}: {}",
-                    FILE_PATH_COPYRIGHT_2048_COMPRESSED,
+                    FILE_PATH_COMPRESSED_BC3,
                     err.description()
                 )
             }
@@ -173,7 +175,7 @@ mod tests {
             Err(err) => {
                 panic!(
                     "Failed to read test data at {}: {}",
-                    FILE_PATH_COPYRIGHT_2048_DECOMPRESSED,
+                    FILE_PATH_DECOMPRESSED_BC3,
                     err.description()
                 )
             }
@@ -190,7 +192,78 @@ mod tests {
             Err(err) => {
                 panic!(
                     "Failed to decompress test data at {}: {}",
-                    FILE_PATH_COPYRIGHT_2048_COMPRESSED,
+                    FILE_PATH_COMPRESSED_BC3,
+                    err.description()
+                );
+            }
+        };
+
+        assert_eq!(decompressed_data.len(), correct_decompressed_data.len());
+        assert_eq!(decompressed_data, correct_decompressed_data);
+    }
+
+    #[test]
+    fn decode_rust_bc1() {
+        let mut compressed_file = match File::open(FILE_PATH_COMPRESSED_BC1) {
+            Ok(f) => f,
+            Err(err) => {
+                panic!(
+                    "Failed to open test data file at {}: {}",
+                    FILE_PATH_COMPRESSED_BC1,
+                    err.description()
+                )
+            }
+        };
+
+        let mut compressed_data = Vec::new();
+        match compressed_file.read_to_end(&mut compressed_data) {
+            Ok(_) => {
+                assert_eq!(compressed_data.len(), 2796216);
+            }
+            Err(err) => {
+                panic!(
+                    "Failed to read test data at {}: {}",
+                    FILE_PATH_COMPRESSED_BC1,
+                    err.description()
+                )
+            }
+        };
+
+        let mut decompressed_file = match File::open(FILE_PATH_DECOMPRESSED_BC1) {
+            Ok(f) => f,
+            Err(err) => {
+                panic!(
+                    "Failed to open test data file at {}: {}",
+                    FILE_PATH_COMPRESSED_BC1,
+                    err.description()
+                )
+            }
+        };
+
+        let mut correct_decompressed_data = Vec::new();
+        match decompressed_file.read_to_end(&mut correct_decompressed_data) {
+            Ok(_) => {}
+            Err(err) => {
+                panic!(
+                    "Failed to read test data at {}: {}",
+                    FILE_PATH_DECOMPRESSED_BC1,
+                    err.description()
+                )
+            }
+        };
+
+        let decompressed_data = match decode_rust(
+            &compressed_data,
+            2048,
+            2048,
+            BcnEncoding::Bc1,
+            BcnDecoderFormat::RGBA,
+        ) {
+            Ok(result) => result,
+            Err(err) => {
+                panic!(
+                    "Failed to decompress test data at {}: {}",
+                    FILE_PATH_COMPRESSED_BC1,
                     err.description()
                 );
             }
