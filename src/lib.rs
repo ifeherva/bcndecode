@@ -131,14 +131,13 @@ mod tests {
         assert_eq!(decompressed_data, correct_decompressed_data);
     }
 
-    #[test]
-    fn decode_rust_bc3() {
-        let mut compressed_file = match File::open(FILE_PATH_COMPRESSED_BC3) {
+    fn test_decode_rust(compressed_path: &str, compressed_len: usize, decompressed_path: &str, width: usize, height: usize, encoding: BcnEncoding, format: BcnDecoderFormat) {
+        let mut compressed_file = match File::open(compressed_path) {
             Ok(f) => f,
             Err(err) => {
                 panic!(
                     "Failed to open test data file at {}: {}",
-                    FILE_PATH_COMPRESSED_BC3,
+                    compressed_path,
                     err.description()
                 )
             }
@@ -147,23 +146,23 @@ mod tests {
         let mut compressed_data = Vec::new();
         match compressed_file.read_to_end(&mut compressed_data) {
             Ok(_) => {
-                assert_eq!(compressed_data.len(), 5592432);
+                assert_eq!(compressed_data.len(), compressed_len);
             }
             Err(err) => {
                 panic!(
                     "Failed to read test data at {}: {}",
-                    FILE_PATH_COMPRESSED_BC3,
+                    compressed_path,
                     err.description()
                 )
             }
         };
 
-        let mut decompressed_file = match File::open(FILE_PATH_DECOMPRESSED_BC3) {
+        let mut decompressed_file = match File::open(decompressed_path) {
             Ok(f) => f,
             Err(err) => {
                 panic!(
                     "Failed to open test data file at {}: {}",
-                    FILE_PATH_COMPRESSED_BC3,
+                    decompressed_path,
                     err.description()
                 )
             }
@@ -175,7 +174,7 @@ mod tests {
             Err(err) => {
                 panic!(
                     "Failed to read test data at {}: {}",
-                    FILE_PATH_DECOMPRESSED_BC3,
+                    decompressed_path,
                     err.description()
                 )
             }
@@ -183,16 +182,16 @@ mod tests {
 
         let decompressed_data = match decode_rust(
             &compressed_data,
-            2048,
-            2048,
-            BcnEncoding::Bc3,
-            BcnDecoderFormat::RGBA,
+            width,
+            height,
+            encoding,
+            format,
         ) {
             Ok(result) => result,
             Err(err) => {
                 panic!(
                     "Failed to decompress test data at {}: {}",
-                    FILE_PATH_COMPRESSED_BC3,
+                    compressed_path,
                     err.description()
                 );
             }
@@ -203,73 +202,14 @@ mod tests {
     }
 
     #[test]
+    fn decode_rust_bc3() {
+        test_decode_rust(FILE_PATH_COMPRESSED_BC3, 5592432, 
+        FILE_PATH_DECOMPRESSED_BC3, 2048, 2048, BcnEncoding::Bc3, BcnDecoderFormat::RGBA); 
+    }
+
+    #[test]
     fn decode_rust_bc1() {
-        let mut compressed_file = match File::open(FILE_PATH_COMPRESSED_BC1) {
-            Ok(f) => f,
-            Err(err) => {
-                panic!(
-                    "Failed to open test data file at {}: {}",
-                    FILE_PATH_COMPRESSED_BC1,
-                    err.description()
-                )
-            }
-        };
-
-        let mut compressed_data = Vec::new();
-        match compressed_file.read_to_end(&mut compressed_data) {
-            Ok(_) => {
-                assert_eq!(compressed_data.len(), 2796216);
-            }
-            Err(err) => {
-                panic!(
-                    "Failed to read test data at {}: {}",
-                    FILE_PATH_COMPRESSED_BC1,
-                    err.description()
-                )
-            }
-        };
-
-        let mut decompressed_file = match File::open(FILE_PATH_DECOMPRESSED_BC1) {
-            Ok(f) => f,
-            Err(err) => {
-                panic!(
-                    "Failed to open test data file at {}: {}",
-                    FILE_PATH_COMPRESSED_BC1,
-                    err.description()
-                )
-            }
-        };
-
-        let mut correct_decompressed_data = Vec::new();
-        match decompressed_file.read_to_end(&mut correct_decompressed_data) {
-            Ok(_) => {}
-            Err(err) => {
-                panic!(
-                    "Failed to read test data at {}: {}",
-                    FILE_PATH_DECOMPRESSED_BC1,
-                    err.description()
-                )
-            }
-        };
-
-        let decompressed_data = match decode_rust(
-            &compressed_data,
-            2048,
-            2048,
-            BcnEncoding::Bc1,
-            BcnDecoderFormat::RGBA,
-        ) {
-            Ok(result) => result,
-            Err(err) => {
-                panic!(
-                    "Failed to decompress test data at {}: {}",
-                    FILE_PATH_COMPRESSED_BC1,
-                    err.description()
-                );
-            }
-        };
-
-        assert_eq!(decompressed_data.len(), correct_decompressed_data.len());
-        assert_eq!(decompressed_data, correct_decompressed_data);
+        test_decode_rust(FILE_PATH_COMPRESSED_BC1, 2796216, 
+        FILE_PATH_DECOMPRESSED_BC1, 2048, 2048, BcnEncoding::Bc1, BcnDecoderFormat::RGBA); 
     }
 }
