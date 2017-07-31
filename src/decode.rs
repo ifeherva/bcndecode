@@ -136,6 +136,7 @@ pub fn decode_rust_internal(
         BcnDecoderFormat::BGRA => state.swizzle = 0b11000110,
         BcnDecoderFormat::ARGB => state.swizzle = 0b10010011,
         BcnDecoderFormat::ABGR => state.swizzle = 0b00011011,
+        _ => state.swizzle = 0,
     }
 
     if ((width & 3) | (height & 3)) != 0 {

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-use libc::{uint8_t, c_int};
+use libc::{c_int, uint8_t};
 use std::result::Result;
 use std::error;
 use std::io;
@@ -100,6 +100,7 @@ pub enum BcnDecoderFormat {
     BGRA = 2,
     ARGB = 3,
     ABGR = 4,
+    LUM = 5,
 }
 
 /// Encoding type of the source data.

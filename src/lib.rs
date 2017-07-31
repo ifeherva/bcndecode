@@ -55,10 +55,13 @@ mod tests {
     use std::error::Error;
     use super::bcndecode::*;
 
-    static FILE_PATH_COMPRESSED_BC3: &'static str = "testdata/images/copyright_2048_compressed_bc3.dat";
-    static FILE_PATH_DECOMPRESSED_BC3: &'static str = "testdata/images/copyright_2048_decompressed_bc3.dat";
     static FILE_PATH_COMPRESSED_BC1: &'static str = "testdata/images/copyright_2048_compressed_bc1.dat";
+    static FILE_PATH_COMPRESSED_BC3: &'static str = "testdata/images/copyright_2048_compressed_bc3.dat";
+    static FILE_PATH_COMPRESSED_BC4: &'static str = "testdata/images/copyright_2048_compressed_bc4.dat";
+
     static FILE_PATH_DECOMPRESSED_BC1: &'static str = "testdata/images/copyright_2048_decompressed_bc1.dat";
+    static FILE_PATH_DECOMPRESSED_BC3: &'static str = "testdata/images/copyright_2048_decompressed_bc3.dat";
+    static FILE_PATH_DECOMPRESSED_BC4: &'static str = "testdata/images/copyright_2048_decompressed_bc4.dat";
 
     #[test]
     fn decode_bc3() {
@@ -202,14 +205,20 @@ mod tests {
     }
 
     #[test]
+    fn decode_rust_bc1() {
+        test_decode_rust(FILE_PATH_COMPRESSED_BC1, 2796216, 
+        FILE_PATH_DECOMPRESSED_BC1, 2048, 2048, BcnEncoding::Bc1, BcnDecoderFormat::RGBA); 
+    }
+
+    #[test]
     fn decode_rust_bc3() {
         test_decode_rust(FILE_PATH_COMPRESSED_BC3, 5592432, 
         FILE_PATH_DECOMPRESSED_BC3, 2048, 2048, BcnEncoding::Bc3, BcnDecoderFormat::RGBA); 
     }
 
     #[test]
-    fn decode_rust_bc1() {
-        test_decode_rust(FILE_PATH_COMPRESSED_BC1, 2796216, 
-        FILE_PATH_DECOMPRESSED_BC1, 2048, 2048, BcnEncoding::Bc1, BcnDecoderFormat::RGBA); 
+    fn decode_rust_bc4() {
+        test_decode_rust(FILE_PATH_COMPRESSED_BC4, 2796216, 
+        FILE_PATH_DECOMPRESSED_BC4, 2048, 2048, BcnEncoding::Bc4, BcnDecoderFormat::LUM); 
     }
 }
