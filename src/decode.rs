@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-use bcndecode::{BcnDecoderFormat, BcnEncoding, Error, ErrorKind};
+use super::{BcnDecoderFormat, BcnEncoding, Error};
 use std::mem;
 use std::slice;
 
@@ -101,8 +101,7 @@ impl Bc3Alpha {
     }
 }
 
-// TODO_rename
-pub fn decode_rust_internal(
+pub fn decode_rust(
     source: &[u8],
     width: usize,
     height: usize,
@@ -112,15 +111,8 @@ pub fn decode_rust_internal(
 
     // check input data validity
     if width == 0 || height == 0 {
-        return Err(Error::new(ErrorKind::InvalidImageSize));
+        return Err(Error::InvalidImageSize);
     }
-
-    match encoding {
-        BcnEncoding::Raw | BcnEncoding::Bc7 => {
-            return Err(Error::new(ErrorKind::NotImplemented));
-        }
-        _ => {}
-    };
 
     // create target buffer
     let mut dst_size = 4 * width * height;
@@ -145,7 +137,14 @@ pub fn decode_rust_internal(
         BcnDecoderFormat::BGRA => state.swizzle = 0b11000110,
         BcnDecoderFormat::ARGB => state.swizzle = 0b10010011,
         BcnDecoderFormat::ABGR => state.swizzle = 0b00011011,
-        _ => state.swizzle = 0,
+        BcnDecoderFormat::LUM => match encoding {
+            BcnEncoding::Bc4 => {
+                state.swizzle = 0;
+            }
+            _ => {
+                return Err(Error::InvalidPixelFormat);
+            }
+        },
     }
 
     if ((width & 3) | (height & 3)) != 0 {
@@ -233,14 +232,14 @@ fn decode_bcn(state: &mut BcnDecoderState, source: &[u8], encoding: BcnEncoding,
                 state.sign
             );
         }
-        BcnEncoding::Bc7 => {
+        /*BcnEncoding::Bc7 => {
             //decode_loop!(decode_bc7_block, 16, RGBA, source, state, flip);
             unimplemented!();
         }
         _ => {
             // TODO: RAW
             unimplemented!();
-        }
+        }*/
     };
 }
 
