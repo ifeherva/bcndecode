@@ -18,10 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+use libc::{c_int, uint8_t};
 use std::fs::File;
 use std::io::Read;
-use std::error::Error;
-use super::bcndecode::*;
+use std::error;
+use super::decode::*;
+
+use BcnDecoderFormat;
+use BcnEncoding;
+use super::Error;
 
 static TEST_DATA_PATH: &'static str = "testdata/images/";
 
@@ -35,6 +40,67 @@ static DECOMPRESSED_BC1: &'static str = "copyright_2048_decompressed_bc1.dat";
 static DECOMPRESSED_BC3: &'static str = "copyright_2048_decompressed_bc3.dat";
 static DECOMPRESSED_BC4: &'static str = "copyright_2048_decompressed_bc4.dat";
 static DECOMPRESSED_BC5: &'static str = "copyright_2048_decompressed_bc5.dat";
+
+extern "C" {
+    fn BcnDecode(
+        dst: *mut uint8_t,
+        dst_size: c_int,
+        src: *const uint8_t,
+        src_size: c_int,
+        width: c_int,
+        height: c_int,
+        N: c_int,
+        dst_format: c_int,
+        flip: c_int,
+    ) -> c_int;
+}
+
+fn decode_c(
+    source: &[u8],
+    width: usize,
+    height: usize,
+    encoding: BcnEncoding,
+    format: BcnDecoderFormat,
+) -> Result<Vec<u8>, Error> {
+    let mut dst_size = (4 * width * height) as usize;
+
+    match encoding {
+        BcnEncoding::Bc4 => {
+            dst_size >>= 2;
+        }
+        BcnEncoding::Bc6H => {
+            dst_size <<= 2;
+        }
+        _ => {}
+    };
+
+    let mut dst: Vec<u8> = vec![0; dst_size];
+
+    let mut flip: c_int = 0;
+
+    if ((width & 3) | (height & 3)) != 0 {
+        flip = 1;
+    }
+
+    unsafe {
+        let data_read = BcnDecode(
+            dst.as_mut_ptr(),
+            dst.len() as c_int,
+            source.as_ptr(),
+            source.len() as c_int,
+            width as c_int,
+            height as c_int,
+            encoding as c_int,
+            format as c_int,
+            flip,
+        );
+        if data_read < 0 {
+            return Err(Error::ImageDecodingError);
+        }
+    }
+
+    Ok(dst)
+}
 
 /// Compares the decoding output of the C and rust implementation
 fn compare_decode(
@@ -50,7 +116,7 @@ fn compare_decode(
         Err(err) => panic!(
             "Failed to open test data file at {}: {}",
             file_path,
-            err.description()
+            error::Error::description(&err)
         ),
     };
 
@@ -60,17 +126,17 @@ fn compare_decode(
         Err(err) => panic!(
             "Failed to read test data at {}: {}",
             file_path,
-            err.description()
+            error::Error::description(&err)
         ),
     };
 
-    let decompressed_data_c = match decode(&compressed_data, width, height, encoding, format) {
+    let decompressed_data_c = match decode_c(&compressed_data, width, height, encoding, format) {
         Ok(result) => result,
         Err(err) => {
             panic!(
                 "Failed to decompress test data with c decoder at {}: {}",
                 file_path,
-                err.description()
+                error::Error::description(&err)
             );
         }
     };
@@ -82,7 +148,7 @@ fn compare_decode(
                 panic!(
                     "Failed to decompress test data with rust decoder at {}: {}",
                     file_path,
-                    err.description()
+                    error::Error::description(&err)
                 );
             }
         };
@@ -106,7 +172,7 @@ fn test_decode_rust(
         Err(err) => panic!(
             "Failed to open test data file at {}: {}",
             compressed_file_path,
-            err.description()
+            error::Error::description(&err)
         ),
     };
 
@@ -118,7 +184,7 @@ fn test_decode_rust(
         Err(err) => panic!(
             "Failed to read test data at {}: {}",
             compressed_file_path,
-            err.description()
+            error::Error::description(&err)
         ),
     };
 
@@ -128,7 +194,7 @@ fn test_decode_rust(
         Err(err) => panic!(
             "Failed to open test data file at {}: {}",
             decompressed_file_path,
-            err.description()
+            error::Error::description(&err)
         ),
     };
 
@@ -138,7 +204,7 @@ fn test_decode_rust(
         Err(err) => panic!(
             "Failed to read test data at {}: {}",
             decompressed_file_path,
-            err.description()
+            error::Error::description(&err)
         ),
     };
 
@@ -148,7 +214,7 @@ fn test_decode_rust(
             panic!(
                 "Failed to decompress test data at {}: {}",
                 compressed_file_path,
-                err.description()
+                error::Error::description(&err)
             );
         }
     };
