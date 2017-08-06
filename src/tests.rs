@@ -29,6 +29,7 @@ static COMPRESSED_BC1: &'static str = "copyright_2048_compressed_bc1.dat";
 static COMPRESSED_BC3: &'static str = "copyright_2048_compressed_bc3.dat";
 static COMPRESSED_BC4: &'static str = "copyright_2048_compressed_bc4.dat";
 static COMPRESSED_BC5: &'static str = "copyright_2048_compressed_bc5.dat";
+static COMPRESSED_BC6H: &'static str = "copyright_2048_compressed_bc6h.dat";
 
 static DECOMPRESSED_BC1: &'static str = "copyright_2048_decompressed_bc1.dat";
 static DECOMPRESSED_BC3: &'static str = "copyright_2048_decompressed_bc3.dat";
@@ -215,6 +216,17 @@ fn compare_decode_bc5() {
         2048,
         2048,
         BcnEncoding::Bc5,
+        BcnDecoderFormat::RGBA,
+    );
+}
+
+#[test]
+fn compare_decode_bc6h() {
+    compare_decode(
+        COMPRESSED_BC6H,
+        2048,
+        2048,
+        BcnEncoding::Bc6H,
         BcnDecoderFormat::RGBA,
     );
 }

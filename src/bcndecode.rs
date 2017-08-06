@@ -118,9 +118,11 @@ pub enum BcnEncoding {
     Bc4 = 4,
     /// BC5: 2-channel 8-bit via 2 BC3 alpha blocks
     Bc5 = 5,
-    /// BC6: 3-channel 16-bit float (not implemented)
-    Bc6 = 6,
-    /// BC7: 4-channel 8-bit via everything (not implemented)
+    /// BC6: Three color channels (16 bits:16 bits:16 bits) in "half" floating point
+    /// (16 bit value that consists of an optional sign bit, a 5 bit biased exponent,
+    /// and a 10 or 11 bit mantissa.)
+    Bc6H = 6,
+    /// BC7: Three color channels (4 to 7 bits per channel) with 0 to 8 bits of alpha
     Bc7 = 7,
 }
 
@@ -177,7 +179,7 @@ pub fn decode(
         BcnEncoding::Bc4 => {
             dst_size >>= 2;
         }
-        BcnEncoding::Bc6 => {
+        BcnEncoding::Bc6H => {
             dst_size <<= 2;
         }
         _ => {}
