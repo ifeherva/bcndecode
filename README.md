@@ -3,6 +3,8 @@
 
 This crate provides methods to decompress DXTn-compressed image data. The decompression code was based on the original C code used in the [Python Pillow Imaging package](https://python-pillow.org/).
 
+[Documentation](https://docs.rs/bcndecode/0.2.0/)
+
 The following formats are currently supported:
 
 * Bc1: 565 color, 1-bit alpha (dxt1)
