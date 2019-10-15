@@ -336,11 +336,11 @@ fn swizzle_copy(swizzle: u8, dst: &mut [u8], src: &[u8], mut block_size: usize) 
 }
 
 fn decode_bc1_block(col: &mut [RGBA], source: &[u8]) {
-    decode_bc1_color(col, source);
+    decode_bc1_color(col, source, false);
 }
 
 fn decode_bc2_block(col: &mut [RGBA], source: &[u8]) {
-    decode_bc1_color(col, &source[8..]);
+    decode_bc1_color(col, &source[8..], true);
     for n in 0..16 {
         let bit_i: usize = n * 4;
         let by_i: usize = bit_i >> 3;
@@ -351,7 +351,7 @@ fn decode_bc2_block(col: &mut [RGBA], source: &[u8]) {
 }
 
 fn decode_bc3_block(col: &mut [RGBA], source: &[u8]) {
-    decode_bc1_color(col, &source[8..]);
+    decode_bc1_color(col, &source[8..], true);
     unsafe {
         decode_bc3_alpha(to_byte_ptr_mut(col), source, mem::size_of::<RGBA>(), 3);
     }
@@ -2210,7 +2210,7 @@ fn decode_565(x: u16) -> RGBA {
     };
 }
 
-fn decode_bc1_color(dst: &mut [RGBA], source: &[u8]) {
+fn decode_bc1_color(dst: &mut [RGBA], source: &[u8], separate_alpha: bool) {
     let mut col = Bc1Color::default();
     let mut p = [RGBA::default(); 4];
 
@@ -2226,7 +2226,7 @@ fn decode_bc1_color(dst: &mut [RGBA], source: &[u8]) {
     let g1: u16 = p[1].g as u16;
     let b1: u16 = p[1].b as u16;
 
-    if col.c0 > col.c1 {
+    if col.c0 > col.c1 || separate_alpha {
         p[2].r = ((2 * r0 + 1 * r1) / 3) as u8;
         p[2].g = ((2 * g0 + 1 * g1) / 3) as u8;
         p[2].b = ((2 * b0 + 1 * b1) / 3) as u8;
