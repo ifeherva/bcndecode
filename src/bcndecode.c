@@ -85,7 +85,7 @@ static rgba decode_565(uint16_t x)
     return c;
 }
 
-static void decode_bc1_color(rgba *dst, const uint8_t *src)
+static void decode_bc1_color(rgba *dst, const uint8_t *src, int separate_alpha)
 {
     bc1_color col;
     rgba p[4];
@@ -101,7 +101,7 @@ static void decode_bc1_color(rgba *dst, const uint8_t *src)
     r1 = p[1].r;
     g1 = p[1].g;
     b1 = p[1].b;
-    if (col.c0 > col.c1)
+    if (col.c0 > col.c1 || separate_alpha)
     {
         p[2].r = (2 * r0 + 1 * r1) / 3;
         p[2].g = (2 * g0 + 1 * g1) / 3;
@@ -176,13 +176,13 @@ static void decode_bc3_alpha(char *dst, const uint8_t *src, int stride, int o)
 
 static void decode_bc1_block(rgba *col, const uint8_t *src)
 {
-    decode_bc1_color(col, src);
+    decode_bc1_color(col, src, 0);
 }
 
 static void decode_bc2_block(rgba *col, const uint8_t *src)
 {
     int n, bitI, byI, av;
-    decode_bc1_color(col, src + 8);
+    decode_bc1_color(col, src + 8, 1);
     for (n = 0; n < 16; n++)
     {
         bitI = n * 4;
@@ -195,7 +195,7 @@ static void decode_bc2_block(rgba *col, const uint8_t *src)
 
 static void decode_bc3_block(rgba *col, const uint8_t *src)
 {
-    decode_bc1_color(col, src + 8);
+    decode_bc1_color(col, src + 8, 1);
     decode_bc3_alpha((char *)col, src, sizeof(col[0]), 3);
 }
 
@@ -1119,7 +1119,7 @@ int main(int argc, char **argv) {
             case 5: flip = v; break;
         }
     }
-    
+
     int src_size = 4 * width * height;
     int dst_size = src_size;
     if (N == 1 || N == 4) {
